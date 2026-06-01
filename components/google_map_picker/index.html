@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      color: #2f3437;
+      background: #f7f9fc;
+    }
+    .map-shell {
+      position: relative;
+      width: 100%;
+      height: 560px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    .search-card {
+      position: absolute;
+      z-index: 5;
+      top: 14px;
+      left: 14px;
+      width: min(440px, calc(100% - 28px));
+      background: #ffffff;
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(6, 43, 73, 0.18);
+      padding: 10px;
+    }
+    #search {
+      box-sizing: border-box;
+      width: 100%;
+      height: 42px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 0 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    #search:focus {
+      border-color: #f5a623;
+      box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.18);
+    }
+    .status {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #697386;
+    }
+    .error {
+      padding: 16px;
+      border: 1px solid #f0c2c0;
+      border-radius: 8px;
+      background: #fff5f5;
+      color: #9b1c1c;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    const Streamlit = {
+      ready() {
+        window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
+      },
+      setFrameHeight(height) {
+        window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height }, "*");
+      },
+      setComponentValue(value) {
+        window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setComponentValue", value }, "*");
+      }
+    };
+
+    let map;
+    let marker;
+    let geocoder;
+    let elevator;
+    let autocomplete;
+    let loadedKey = "";
+    let googleMapsLoadingPromise = null;
+    let lastPayload = null;
+    let initialized = false;
+    let currentLocationVersion = 0;
+    let eventSequence = 0;
+    const DIAGNOSTIC_LOGS = false;
+
+    Streamlit.ready();
+
+    function safeDiagnostic(level, message, details) {
+      if (!DIAGNOSTIC_LOGS) return;
+      const prefix = "[GDMTH Google Maps]";
+      const safeDetails = details ? sanitizeDiagnosticDetails(details) : undefined;
+      const logger = level === "error" ? console.error : level === "warn" ? console.warn : console.info;
+      if (safeDetails) {
+        logger(prefix, message, safeDetails);
+      } else {
+        logger(prefix, message);
+      }
+    }
+
+    function sanitizeDiagnosticDetails(details) {
+      if (details instanceof Error) {
+        return { name: details.name, message: details.message, code: details.code || undefined };
+      }
+      if (typeof details !== "object" || details === null) {
+        return details;
+      }
+      const allowed = {};
+      for (const key of ["source", "status", "message", "name", "code", "lat", "lng", "hasGeometry", "hasElevation", "resultCount", "eventVersion"]) {
+        if (Object.prototype.hasOwnProperty.call(details, key)) {
+          allowed[key] = details[key];
+        }
+      }
+      return allowed;
+    }
+
+    window.addEventListener("message", (event) => {
+      if (!event.data || event.data.type !== "streamlit:render") return;
+      const args = event.data.args || {};
+      lastPayload = args;
+      currentLocationVersion = Number(args.location_version || 0);
+      const height = Number(args.height || 560);
+      Streamlit.setFrameHeight(height + 2);
+      render(args, height);
+    });
+
+    function render(args, height) {
+      const root = document.getElementById("root");
+      const apiKey = (args.api_key || "").trim();
+      if (!apiKey) {
+        root.innerHTML = '<div class="error">Falta Google Maps API key.</div>';
+        return;
+      }
+
+      if (!initialized) {
+        root.innerHTML = `
+          <div class="map-shell" style="height:${height}px">
+            <div class="search-card">
+              <input id="search" type="text" placeholder="Buscar ciudad, dirección o sitio..." autocomplete="off" />
+              <div class="status" id="status">Busca un lugar o haz click en el mapa.</div>
+            </div>
+            <div id="map"></div>
+          </div>
+        `;
+      }
+
+      if (!window.google || !window.google.maps || loadedKey !== apiKey) {
+        safeDiagnostic("info", "Loading Google Maps JavaScript API.");
+        loadGoogleMaps(apiKey).then(() => initializeMap(lastPayload || args)).catch((error) => {
+          safeDiagnostic("error", "Google Maps JavaScript API failed to load.", error);
+          root.innerHTML = `<div class="error">No se pudo cargar Google Maps. Revisa API key, billing y APIs habilitadas.<br>${error.message || error}</div>`;
+        });
+      } else if (!initialized) {
+        initializeMap(args);
+      } else {
+        applyPythonLocation(args);
+      }
+    }
+
+    function loadGoogleMaps(apiKey) {
+      if (window.google && window.google.maps && loadedKey === apiKey) {
+        return Promise.resolve();
+      }
+      if (googleMapsLoadingPromise && loadedKey === apiKey) {
+        return googleMapsLoadingPromise;
+      }
+
+      googleMapsLoadingPromise = new Promise((resolve, reject) => {
+        loadedKey = apiKey;
+        const callbackName = "initGoogleMapsPicker_" + Math.random().toString(36).slice(2);
+        window[callbackName] = () => {
+          delete window[callbackName];
+          safeDiagnostic("info", "Google Maps JavaScript API loaded.");
+          resolve();
+        };
+        const script = document.createElement("script");
+        script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(apiKey) + "&libraries=places&callback=" + callbackName;
+        script.async = true;
+        script.defer = true;
+        script.onerror = () => reject(new Error("Error cargando el script de Google Maps."));
+        document.head.appendChild(script);
+      });
+      googleMapsLoadingPromise.finally(() => {
+        googleMapsLoadingPromise = null;
+      });
+      return googleMapsLoadingPromise;
+    }
+
+    function initializeMap(args) {
+      const center = { lat: Number(args.latitude), lng: Number(args.longitude) };
+      safeDiagnostic("info", "Initializing map.", { lat: center.lat, lng: center.lng });
+      map = new google.maps.Map(document.getElementById("map"), {
+        center,
+        zoom: 11,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        clickableIcons: false,
+      });
+      marker = new google.maps.Marker({
+        position: center,
+        map,
+        draggable: true,
+        title: args.label || "Ubicación activa",
+      });
+      geocoder = new google.maps.Geocoder();
+      elevator = new google.maps.ElevationService();
+      safeDiagnostic("info", "Geocoder and ElevationService initialized.");
+
+      const search = document.getElementById("search");
+      search.value = args.label || "";
+      autocomplete = new google.maps.places.Autocomplete(search, {
+        fields: ["geometry", "formatted_address", "name"],
+      });
+      autocomplete.bindTo("bounds", map);
+      autocomplete.addListener("place_changed", onPlaceChanged);
+      safeDiagnostic("info", "Places Autocomplete initialized.");
+
+      map.addListener("click", (event) => selectLatLng(event.latLng, null));
+      marker.addListener("dragend", (event) => selectLatLng(event.latLng, null));
+
+      initialized = true;
+      applyPythonLocation(args);
+      setStatus("Busca un lugar o haz click en el mapa.");
+    }
+
+    function onPlaceChanged() {
+      safeDiagnostic("info", "Places Autocomplete place_changed fired.");
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        safeDiagnostic("warn", "Places Autocomplete returned no geometry.", {
+          name: place && place.name,
+          hasGeometry: Boolean(place && place.geometry),
+        });
+        setStatus("Selecciona una opción de Google Places.");
+        return;
+      }
+      const label = place.formatted_address || place.name || "";
+      safeDiagnostic("info", "Place selected successfully.", {
+        source: "places",
+        name: place.name || "",
+        hasGeometry: true,
+      });
+      selectLatLng(place.geometry.location, label);
+    }
+
+    function selectLatLng(latLng, label) {
+      const lat = latLng.lat();
+      const lng = latLng.lng();
+      const eventVersion = Number(lastPayload && lastPayload.location_version || currentLocationVersion || 0);
+      const eventId = nextEventId(eventVersion);
+      safeDiagnostic("info", "Location selected.", {
+        source: label ? "places" : "map",
+        lat: Number(lat.toFixed(6)),
+        lng: Number(lng.toFixed(6)),
+        eventVersion,
+      });
+      setMarker(lat, lng, label || "Ubicación seleccionada", true);
+      map.panTo({ lat, lng });
+      resolveLabelAndElevation(lat, lng, label, eventId, eventVersion);
+    }
+
+    function setMarker(lat, lng, label, updateSearch) {
+      const position = { lat, lng };
+      marker.setPosition(position);
+      marker.setTitle(label || "Ubicación activa");
+      if (updateSearch && label) {
+        document.getElementById("search").value = label;
+      }
+    }
+
+    function applyPythonLocation(args) {
+      const lat = Number(args.latitude);
+      const lng = Number(args.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !map || !marker) return;
+
+      const label = args.label || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      const position = { lat, lng };
+      setMarker(lat, lng, label, false);
+      map.panTo(position);
+
+      const search = document.getElementById("search");
+      if (search && document.activeElement !== search) {
+        search.value = label;
+      }
+    }
+
+    function nextEventId(locationVersion) {
+      eventSequence += 1;
+      return `${locationVersion}-${Date.now()}-${eventSequence}`;
+    }
+
+    function resolveLabelAndElevation(lat, lng, explicitLabel, eventId, eventVersion) {
+      setStatus("Actualizando coordenadas y altitud...");
+      const location = { lat, lng };
+      const reversePromise = explicitLabel
+        ? Promise.resolve(explicitLabel)
+        : geocoder.geocode({ location }).then((response) => {
+            safeDiagnostic("info", "Geocoder responded.", {
+              resultCount: response.results ? response.results.length : 0,
+            });
+            const result = response.results && response.results[0];
+            return result ? result.formatted_address : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          }).catch((error) => {
+            safeDiagnostic("error", "Geocoder failed.", error);
+            return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          });
+
+      const elevationPromise = lastPayload && lastPayload.auto_altitude
+        ? elevator.getElevationForLocations({ locations: [location] }).then((response) => {
+            safeDiagnostic("info", "ElevationService responded.", {
+              resultCount: response.results ? response.results.length : 0,
+              hasElevation: Boolean(response.results && response.results[0] && response.results[0].elevation !== null),
+            });
+            const result = response.results && response.results[0];
+            return result ? result.elevation : null;
+          }).catch((error) => {
+            safeDiagnostic("error", "ElevationService failed.", error);
+            return null;
+          })
+        : Promise.resolve(null).then(() => {
+            safeDiagnostic("info", "ElevationService skipped because auto altitude is disabled.");
+            return null;
+          });
+
+      Promise.all([reversePromise, elevationPromise]).then(([resolvedLabel, elevation]) => {
+        document.getElementById("search").value = resolvedLabel;
+        if (elevation === null) {
+          safeDiagnostic("warn", "Elevation API did not return altitude.");
+          setStatus(`Lat ${lat.toFixed(6)}, lon ${lng.toFixed(6)}. Elevation API no devolvió altitud.`);
+        } else {
+          setStatus(`Lat ${lat.toFixed(6)}, lon ${lng.toFixed(6)}, alt ${elevation.toFixed(0)} m`);
+        }
+        Streamlit.setComponentValue({
+          latitude: lat,
+          longitude: lng,
+          altitude_m: elevation,
+          label: resolvedLabel,
+          event_id: eventId,
+          location_version: eventVersion,
+          source: explicitLabel ? "places" : "map",
+        });
+      });
+    }
+
+    function setStatus(text) {
+      const status = document.getElementById("status");
+      if (status) status.textContent = text;
+    }
+  </script>
+</body>
+</html>
