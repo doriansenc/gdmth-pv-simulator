@@ -1837,13 +1837,27 @@ def render_stage1_orientation_step(summary: dict[str, float]) -> None:
 
 
 def _coerce_plot_date_for_year(raw_date: object, simulation_year: int) -> object:
-    min_date = pd.to_datetime(f"{simulation_year}-01-01").date()
-    max_date = pd.to_datetime(f"{simulation_year}-12-31").date()
-    default_date = pd.to_datetime(f"{simulation_year}-06-21").date()
+    min_timestamp = pd.to_datetime(f"{simulation_year}-01-01", errors="coerce")
+    max_timestamp = pd.to_datetime(f"{simulation_year}-12-31", errors="coerce")
+    default_timestamp = pd.to_datetime(f"{simulation_year}-06-21", errors="coerce")
+    if pd.isna(min_timestamp) or pd.isna(max_timestamp) or pd.isna(default_timestamp):
+        fallback_year = pd.Timestamp.now().year
+        min_timestamp = pd.Timestamp(f"{fallback_year}-01-01")
+        max_timestamp = pd.Timestamp(f"{fallback_year}-12-31")
+        default_timestamp = pd.Timestamp(f"{fallback_year}-06-21")
+
+    min_date = min_timestamp.date()
+    max_date = max_timestamp.date()
+    default_date = default_timestamp.date()
     try:
-        selected_date = pd.to_datetime(raw_date).date()
+        selected_timestamp = pd.to_datetime(raw_date, errors="coerce")
     except Exception:
-        selected_date = default_date
+        return default_date
+
+    if pd.isna(selected_timestamp):
+        return default_date
+
+    selected_date = selected_timestamp.date()
     if selected_date < min_date or selected_date > max_date:
         selected_date = default_date
     return selected_date
