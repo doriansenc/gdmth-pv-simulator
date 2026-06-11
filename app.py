@@ -24,15 +24,7 @@ from src.express_savings import compute_express_savings
 from src.backup_engine import calculate_bess_backup, interpret_cycle_life
 from src.profitability_engine import calculate_profitability, percent_to_fraction
 from src.receipt_savings import compute_receipt_based_savings, suggest_industrial_tariff_family
-from src.irradiance_data import (
-    annual_coverage_report,
-    fetch_nsrdb_psm3,
-    fetch_pvgis_hourly,
-    prepare_nasa_power_irradiance,
-    prepare_nasa_power_provisional_irradiance,
-    read_uploaded_irradiance,
-    to_15min_irradiance,
-)
+from src import irradiance_data
 from src.plotting import (
     plot_daily_generation_vs_demand,
     plot_daily_ghi_dni_dhi,
@@ -773,7 +765,7 @@ def external_irradiance_signature_matches(loaded_signature: tuple | None, curren
 
 def validate_final_weather_dataframe(df: pd.DataFrame, simulation_year: int) -> dict:
     """Validate the final weather table used by the simulation, after any remapping/completion."""
-    report = annual_coverage_report(df, int(simulation_year))
+    report = irradiance_data.annual_coverage_report(df, int(simulation_year))
     years_present: list[int] = []
     if isinstance(df, pd.DataFrame) and not df.empty and "datetime" in df.columns:
         timestamps = pd.to_datetime(df["datetime"], errors="coerce").dropna()
@@ -801,7 +793,7 @@ def log_weather_signature_mismatch(
 ) -> None:
     """Print safe development diagnostics for weather-signature mismatches."""
     simulation_year = int(st.session_state.get("year", DEFAULT_NASA_POWER_YEAR))
-    report = annual_coverage_report(loaded_data, simulation_year) if isinstance(loaded_data, pd.DataFrame) else {}
+    report = irradiance_data.annual_coverage_report(loaded_data, simulation_year) if isinstance(loaded_data, pd.DataFrame) else {}
     years_present: list[int] = []
     if isinstance(loaded_data, pd.DataFrame) and not loaded_data.empty and "datetime" in loaded_data.columns:
         timestamps = pd.to_datetime(loaded_data["datetime"], errors="coerce").dropna()
@@ -860,7 +852,7 @@ def load_nasa_irradiance(
 ) -> pd.DataFrame:
     nasa_power_mode = normalize_nasa_power_mode(nasa_power_mode)
     if nasa_power_mode == NASA_POWER_MODE_PROVISIONAL:
-        return prepare_nasa_power_provisional_irradiance(
+        return irradiance_data.prepare_nasa_power_provisional_irradiance(
             latitude=latitude,
             longitude=longitude,
             simulation_year=simulation_year,
@@ -870,7 +862,7 @@ def load_nasa_irradiance(
         )
 
     reference_year = DEFAULT_NASA_POWER_YEAR if nasa_power_mode == NASA_POWER_MODE_RECOMMENDED else nasa_data_year
-    return prepare_nasa_power_irradiance(
+    return irradiance_data.prepare_nasa_power_irradiance(
         latitude=latitude,
         longitude=longitude,
         simulation_year=simulation_year,
@@ -881,8 +873,8 @@ def load_nasa_irradiance(
 
 @st.cache_data(show_spinner=False)
 def load_pvgis_irradiance(latitude: float, longitude: float, year: int, database: str, timezone: str) -> pd.DataFrame:
-    hourly = fetch_pvgis_hourly(latitude=latitude, longitude=longitude, year=year, raddatabase=database)
-    return to_15min_irradiance(hourly, year=year, timezone=timezone)
+    hourly = irradiance_data.fetch_pvgis_hourly(latitude=latitude, longitude=longitude, year=year, raddatabase=database)
+    return irradiance_data.to_15min_irradiance(hourly, year=year, timezone=timezone)
 
 
 @st.cache_data(show_spinner=False)
@@ -895,7 +887,7 @@ def load_nsrdb_irradiance(
     interval: int,
     timezone: str,
 ) -> pd.DataFrame:
-    data = fetch_nsrdb_psm3(
+    data = irradiance_data.fetch_nsrdb_psm3(
         latitude=latitude,
         longitude=longitude,
         year=year,
@@ -903,7 +895,7 @@ def load_nsrdb_irradiance(
         email=email,
         interval=interval,
     )
-    return to_15min_irradiance(data, year=year, timezone=timezone)
+    return irradiance_data.to_15min_irradiance(data, year=year, timezone=timezone)
 
 
 @st.cache_data(show_spinner=False)
@@ -1224,8 +1216,8 @@ def get_irradiance_data_or_none(pv_config: PVSystemConfig) -> tuple[pd.DataFrame
             if uploaded_file is None:
                 st.info("Carga un CSV o Excel de irradiancia. Mientras tanto se usará cielo despejado con pvlib Ineichen.")
                 return None, "Cielo despejado con pvlib Ineichen"
-            data = read_uploaded_irradiance(uploaded_file, year=pv_config.year)
-            data = to_15min_irradiance(data, year=pv_config.year, timezone=pv_config.timezone)
+            data = irradiance_data.read_uploaded_irradiance(uploaded_file, year=pv_config.year)
+            data = irradiance_data.to_15min_irradiance(data, year=pv_config.year, timezone=pv_config.timezone)
             return data, "CSV propio"
 
     except Exception as exc:
