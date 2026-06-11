@@ -4,7 +4,7 @@
 
 El simulador estima el desempeno tecnico y economico de un sistema fotovoltaico conectado a una carga industrial bajo una tarifa tipo GDMTH. El objetivo es comparar, con resolucion de 15 minutos durante un ano completo, la generacion fotovoltaica, la demanda, el autoconsumo, la energia tomada de red y el costo electrico estimado con y sin sistema fotovoltaico.
 
-El modelo esta disenado como MVP academico: prioriza consistencia fisica, trazabilidad de unidades y una aproximacion economica defendible. No sustituye un estudio oficial de interconexion, diseno electrico ni facturacion CFE.
+El modelo esta disenado como una herramienta de simulacion tecnica: prioriza consistencia fisica, trazabilidad de unidades y una aproximacion economica defendible. No sustituye un estudio oficial de interconexion, diseno electrico ni facturacion CFE.
 
 ## Flujo general del modelo
 
@@ -254,7 +254,7 @@ Supuesto horario simplificado:
 | Sabado | 00:00-08:00 y 21:00-24:00 | resto del dia | 19:00-21:00 |
 | Domingo | 00:00-18:00 | 18:00-24:00 | no aplica |
 
-Este calendario es academico y configurable en codigo; no sustituye el calendario oficial CFE por region, temporada o contrato.
+Este calendario es simplificado y configurable en codigo; no sustituye el calendario oficial CFE por region, temporada o contrato.
 
 ### Energia por periodo
 
@@ -395,6 +395,8 @@ La suite de pruebas esta en `tests/test_engines.py`. Cubre conversiones de irrad
 |---|---|---|---|
 | Irradiancia externa | alias de columnas, rechazo de archivos cortos, remuestreo a 15 minutos | `test_standardize_irradiance_table_accepts_common_column_names`, `test_pvgis_horizontal_poa_can_be_resampled_as_ghi`, `test_short_irradiance_file_is_rejected` | Validado |
 | Generacion FV | columnas esperadas, potencia nominal como base, perdidas, energia 15 min, no negatividad | `test_pv_simulation_has_expected_columns_when_pvlib_is_available`, `test_pv_generation_uses_nominal_installed_power_when_pvlib_is_available` | Validado |
+| Estado de Diagnostico solar | recomendaciones FV y orientacion solo por accion explicita; valores manuales limite se conservan | `test_stage1_pv_defaults_do_not_overwrite_valid_manual_values`, `test_stage1_pv_recommendation_only_applies_with_explicit_helper`, `test_stage1_orientation_defaults_do_not_overwrite_valid_zero_values`, `test_stage1_orientation_recommendation_only_applies_with_explicit_helper` | Validado |
+| Firma NASA POWER | cambio de ubicacion invalida datos cargados; cambios FV u orientacion no invalidan clima | `test_loaded_nasa_data_is_not_current_after_location_change_but_survives_pv_changes`, `test_weather_source_signature_ignores_pv_system_parameters`, `test_loaded_nasa_signature_stays_valid_after_orientation_changes` | Validado |
 | Consistencia de panel | advertencia no bloqueante si Wp difiere de area por eficiencia | `test_inconsistent_panel_inputs_create_warning_without_stopping_simulation` | Validado |
 | Balance energetico | autoconsumo, exportacion, red, balances por intervalo y anuales | `test_interval_and_annual_energy_balances_are_conserved` | Validado |
 | Demanda sintetica | maximo, factor de planta, factor de potencia, fines de semana, verano, semilla reproducible | `test_industrial_demand_profile_uses_inputs_and_preserves_units`, `test_industrial_demand_profile_responds_to_capacity_and_plant_factor`, `test_industrial_demand_profile_has_weekend_and_summer_differentiation`, `test_industrial_demand_profile_is_reproducible_by_seed` | Validado |
@@ -407,7 +409,7 @@ La suite de pruebas esta en `tests/test_engines.py`. Cubre conversiones de irrad
 Al cierre de esta documentacion, la suite esperada es:
 
 ```text
-46 passed
+121 passed
 ```
 
 Esto indica que el modelo conserva unidades, balances fisicos y consistencia economica basica bajo los supuestos descritos.

@@ -136,22 +136,25 @@
 .metric-card-custom {
     background: #FFFFFF;
     border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 1rem 1.05rem;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
-    min-height: 112px;
+    border-radius: 12px;
+    padding: 0.72rem 0.8rem;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.035);
+    min-height: 86px;
 }
 
 .metric-card-custom p {
     color: var(--muted);
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.8rem;
+    line-height: 1.25;
 }
 
 .metric-card-custom h3 {
     color: var(--navy);
-    font-size: 1.55rem;
-    margin: 0.25rem 0 0 0;
+    font-size: 1.25rem;
+    line-height: 1.15;
+    margin: 0.18rem 0 0 0;
+    overflow-wrap: anywhere;
 }
 
 .metric-card-custom span {
@@ -159,6 +162,201 @@
     color: var(--muted);
     font-size: 0.82rem;
     margin-top: 0.25rem;
+}
+
+.solar-results-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.58rem;
+    margin: 0.3rem 0 0.65rem 0;
+}
+
+.solar-result-card,
+.scenario-card {
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.72rem;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.035);
+    min-width: 0;
+}
+
+.solar-result-card {
+    min-height: 94px;
+}
+
+.solar-result-card .label,
+.scenario-card .label {
+    color: var(--muted);
+    font-size: 0.68rem;
+    line-height: 1.18;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.015em;
+}
+
+.solar-result-card .value {
+    color: var(--navy);
+    font-size: clamp(1rem, 1.25vw, 1.34rem);
+    line-height: 1.12;
+    margin: 0.24rem 0 0 0;
+    font-weight: 720;
+    overflow-wrap: anywhere;
+}
+
+.solar-result-card .subtext {
+    color: var(--muted);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    margin: 0.28rem 0 0 0;
+}
+
+.dashboard-caption {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    margin: 0.1rem 0 0.45rem 0;
+}
+
+.scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.62rem;
+    margin: 0.35rem 0 0.7rem 0;
+}
+
+.scenario-card {
+    border-top: 3px solid var(--solar);
+}
+
+.scenario-card.optimista {
+    border-top-color: var(--green);
+}
+
+.scenario-card.recomendado {
+    border-top-color: var(--solar);
+}
+
+.scenario-card.conservador {
+    border-top-color: var(--navy);
+}
+
+.scenario-card h3 {
+    color: var(--navy);
+    font-size: 0.95rem;
+    line-height: 1.18;
+    margin: 0 0 0.42rem 0;
+}
+
+.scenario-card .main-value {
+    color: var(--navy);
+    font-size: clamp(1.12rem, 1.55vw, 1.55rem);
+    line-height: 1.08;
+    margin: 0.1rem 0 0.25rem 0;
+    font-weight: 760;
+    overflow-wrap: anywhere;
+}
+
+.scenario-card .delta {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.16rem 0.42rem;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    font-weight: 680;
+    margin-bottom: 0.45rem;
+}
+
+.scenario-card .delta.positive {
+    color: #1F6B2A;
+    background: #EAF5EC;
+}
+
+.scenario-card .delta.neutral {
+    color: var(--navy);
+    background: #EAF2F8;
+}
+
+.scenario-card .delta.negative {
+    color: #9F2B20;
+    background: #FDECEC;
+}
+
+.scenario-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.34rem;
+    margin: 0.1rem 0 0.5rem 0;
+}
+
+.scenario-stat {
+    border: 1px solid #EEF2F6;
+    border-radius: 8px;
+    padding: 0.38rem;
+    min-width: 0;
+}
+
+.scenario-stat span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.66rem;
+    line-height: 1.2;
+}
+
+.scenario-stat strong {
+    display: block;
+    color: var(--text);
+    font-size: 0.78rem;
+    line-height: 1.2;
+    margin-top: 0.1rem;
+    overflow-wrap: anywhere;
+}
+
+.scenario-card .interpretation {
+    color: var(--text);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.interpretation-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.interpretation-block {
+    border: 1px solid #EEF2F6;
+    border-radius: 10px;
+    padding: 0.62rem;
+    background: #FFFFFF;
+}
+
+.interpretation-block h4 {
+    color: var(--navy);
+    font-size: 0.86rem;
+    margin: 0 0 0.25rem 0;
+}
+
+.interpretation-block p {
+    color: var(--text);
+    font-size: 0.8rem;
+    line-height: 1.35;
+    margin: 0;
+}
+
+@media (max-width: 1180px) {
+    .solar-results-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .solar-results-grid,
+    .scenario-grid,
+    .interpretation-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .stTabs [data-baseweb="tab-list"] {
@@ -182,9 +380,28 @@
 div[data-testid="stMetric"] {
     background: #FFFFFF;
     border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 0.8rem 1rem;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    padding: 0.55rem 0.7rem;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.035);
+}
+
+div[data-testid="stMetric"] [data-testid="stMetricLabel"],
+div[data-testid="stMetric"] [data-testid="stMetricValue"],
+div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+}
+
+div[data-testid="stMetric"] [data-testid="stMetricLabel"] {
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    font-size: clamp(1rem, 1.3vw, 1.35rem);
+    line-height: 1.12;
 }
 
 hr {

@@ -1,6 +1,6 @@
-# Contexto Oficial Del Producto: FVoltData
+# Contexto Formal Para Codex: FVoltData
 
-Este documento es la referencia vigente para continuar el desarrollo de FVoltData en nuevos chats de trabajo. Define la identidad del producto, su arquitectura progresiva, las reglas tecnicas permanentes y el estado actual de la Etapa 1.
+Este documento define el contexto de producto, arquitectura, reglas tecnicas y estado actual de FVoltData para orientar nuevas sesiones de trabajo en Codex. Debe leerse antes de iniciar cualquier etapa nueva.
 
 ## 1. Identidad Del Producto
 
@@ -10,7 +10,7 @@ Este documento es la referencia vigente para continuar el desarrollo de FVoltDat
 
 **Objetivo general:** evolucionar el prototipo inicial hacia una herramienta interactiva de diseno progresivo. Para empresas de gran escala, la prioridad no es solo estimar ahorro tarifario, sino mitigar danos operativos causados por apagones. El software debe guiar al usuario paso a paso para dimensionar un sistema de respaldo inteligente basado en BESS + Solar, justificado por el costo de la inaccion, sin saturar la interfaz para consultas rapidas.
 
-## 2. Principios De Diseno
+## 2. Principios Generales Del Producto
 
 - La app debe funcionar como una experiencia progresiva.
 - El usuario debe poder obtener una vista rapida sin llenar todos los modulos.
@@ -25,27 +25,11 @@ Este documento es la referencia vigente para continuar el desarrollo de FVoltDat
 - CSS ligero esta permitido para tarjetas, badges, chips, bordes, espaciado y tipografia.
 - No agregar dependencias nuevas sin autorizacion explicita.
 
-## 3. Reglas Tecnicas Permanentes
+## 3. Estado Actual De La Etapa 1
 
-- No cambiar formulas sin autorizacion explicita.
-- No modificar NASA POWER si la tarea no lo requiere.
-- No tocar motores no relacionados con la tarea solicitada.
-- No tocar demanda, tarifa, balance ni exportaciones si la tarea no lo pide.
-- No agregar dependencias nuevas sin justificar.
-- No usar emojis.
-- No mostrar JSON al usuario.
-- No mostrar HTML como texto.
-- Todo HTML debe renderizarse correctamente o evitarse.
-- Preferir Streamlit nativo para elementos interactivos.
-- Mantener `st.plotly_chart` con keys unicas y estables.
-- Mantener estado durable para NASA POWER.
-- No usar keys de widgets condicionales como fuente de verdad del modelo.
+La Etapa 1, **Diagnostico solar**, ya esta funcional. Cubre el flujo inicial para estimar potencial solar sin depender de datos de consumo.
 
-## 4. Estado Actual De La Etapa 1: Diagnostico Solar
-
-La Etapa 1 esta funcional y cubre el flujo inicial para estimar potencial solar sin depender de datos de consumo.
-
-Componentes disponibles:
+Componentes funcionales actuales:
 
 - Ubicacion geografica.
 - Fuente solar.
@@ -61,23 +45,20 @@ Componentes disponibles:
 - Recomendacion de inclinacion basada en coordenadas.
 - Azimuth modificable.
 
-Reglas vigentes para la Etapa 1:
+Reglas ya establecidas para esta etapa:
 
 - La orientacion no debe invalidar NASA POWER.
 - NASA POWER usa estado durable separado de widgets condicionales.
-- Las recomendaciones de Sistema FV son referencias y solo deben aplicarse cuando el usuario presiona el boton correspondiente.
-- La recomendacion de orientacion es una referencia y solo debe aplicarse cuando el usuario presiona el boton correspondiente.
-- Si cambia la ubicacion, los datos NASA POWER cargados para una configuracion anterior no deben usarse como vigentes; el usuario debe recargar NASA para la nueva ubicacion.
 - Las explicaciones largas en resultados deben estar en expanders.
 - La grafica de barras de escenarios de produccion anual fue eliminada.
 - El diseno de resultados debe mantenerse compacto.
 - No debe mostrarse HTML como texto en pantalla.
 
-## 5. Roadmap Progresivo
+## 4. Arquitectura Progresiva Del Producto
 
-### 5.1 Diagnostico Solar
+### Seccion 1: Vista Rapida - Diagnostico Climatico
 
-**Estado:** siempre visible. Disenado para consultas rapidas.
+**Estado:** siempre visible. Disenada para consultas rapidas.
 
 **Entrada:**
 
@@ -98,7 +79,7 @@ Reglas vigentes para la Etapa 1:
 - Debe mantenerse ligera, rapida y visual.
 - Debe ser util incluso si el usuario solo quiere conocer el potencial solar de una ubicacion.
 
-### 5.2 Consumo Y Ahorro
+### Seccion 2: Perfil De Demanda, Balance Solar Y Modulo Express
 
 **Estado:** condicional. Se activa cuando el usuario decide ingresar datos de consumo.
 
@@ -106,7 +87,6 @@ Reglas vigentes para la Etapa 1:
 
 - Promedio mensual estimado.
 - Historico detallado en tabla, por ejemplo a partir de recibos CFE.
-- Perfil real de demanda cargado por archivo, cuando exista.
 
 **Entrada del modulo solar:**
 
@@ -133,7 +113,7 @@ Reglas vigentes para la Etapa 1:
 - Este modulo debe seguir siendo mas simple que el analisis tarifario formal.
 - El objetivo es dar una estimacion rapida de ahorro y balance solar.
 
-### 5.3 Respaldo
+### Seccion 3: Ingenieria De Resiliencia Ante Apagones
 
 **Estado:** condicional. Se activa cuando el usuario cambia el valor inicial de horas de respaldo desde 0.
 
@@ -156,7 +136,7 @@ Reglas vigentes para la Etapa 1:
 - El usuario debe entender cuanto respaldo necesita y que tamano de bateria requeriria.
 - No debe saturar la vista rapida.
 
-### 5.4 Rentabilidad
+### Seccion 4: Evaluacion Financiera De Continuidad De Negocio
 
 **Estado:** condicional. Se despliega si el usuario solicita analisis avanzado de rentabilidad.
 
@@ -179,24 +159,22 @@ Reglas vigentes para la Etapa 1:
 - Debe considerar continuidad de negocio, resiliencia y perdidas evitadas.
 - El enfoque debe ser formal y empresarial.
 
-### 5.5 Facturacion CFE Opcional
+## 5. Modulo Opcional De Facturacion Precargado CFE
 
-**Estado:** roadmap opcional.
+Este modulo existe como roadmap opcional.
 
-Si el usuario decide realizar un analisis con datos de recibo en lugar del modulo express, la interfaz debe permitir capturar consumo, demanda cuando aplique y precio medio facturado MXN/kWh por periodo. El objetivo es generar un analisis anual historico cuando existan periodos completos, o una proyeccion anual cuando el usuario capture menos periodos.
+Si el usuario decide realizar un desglose formal en lugar del modulo express, la interfaz debe contar con un menu desplegable para evaluar el impacto economico segun tarifa especifica. El motor debe cruzar automaticamente consumos con estructuras tarifarias precargadas.
 
-#### Recibo Industrial
+### A. Tarifa Industrial GDMTO Coatepec, Veracruz
 
-- Capturar demanda contratada kW.
-- Capturar tarifa que aparece en el recibo, opcional.
-- Capturar periodo, consumo total kWh y demanda maxima kW.
-- Capturar factor de potencia %, opcional.
-- Capturar precio medio MXN/kWh.
-- Sugerir familia GDMTO/GDMTH a partir de datos del recibo sin fijar ciudad, cliente ni mes.
+- Precargar variables de ejemplo como cargos fijos y proporcionales.
+- Usar datos base de recibo real de referencia, por ejemplo Stteger, mayo 2026.
+- Permitir estimar costo base para proyeccion anual.
+- Permitir costo promedio por kWh por mes si se usa una aproximacion.
 
-#### Tarifas Residenciales Tipo 1
+### B. Tarifas Residenciales Tipo 1
 
-La tabla residencial tipo 1 solo identifica limites de bloques y clasificacion de tarifa. No contiene precios por kWh, no debe ser editable y no debe usarse como fuente de precios. El precio economico usable en esta etapa es el precio medio facturado que el usuario lee del recibo mensual o bimestral.
+El resto del consumo acumulado residencial se considera excedente.
 
 | Tarifa | Basico | Intermedio | Verano Int. 1 | Verano Int. 2 | Limite DAC |
 |---|---:|---:|---:|---:|---:|
@@ -207,36 +185,38 @@ La tabla residencial tipo 1 solo identifica limites de bloques y clasificacion d
 | 1E | 150 kWh | 350 kWh | 600 kWh | 600 kWh | 5,000 kWh |
 | 1F | 150 kWh | 450 kWh | 1,800 kWh | 2,600 kWh | 5,000 kWh |
 
-## 6. Reglas De NASA POWER
+## 6. Reglas Tecnicas Permanentes
+
+- No cambiar formulas sin autorizacion explicita.
+- No modificar NASA POWER si la tarea no lo requiere.
+- No tocar motores no relacionados con la tarea solicitada.
+- No tocar demanda, tarifa, balance ni exportaciones si la tarea no lo pide.
+- No agregar dependencias nuevas sin justificar.
+- No usar emojis.
+- No mostrar JSON al usuario.
+- No mostrar HTML como texto.
+- Todo HTML debe renderizarse correctamente o evitarse.
+- Preferir Streamlit nativo para elementos interactivos.
+- Mantener `st.plotly_chart` con keys unicas y estables.
+- Mantener estado durable para NASA POWER.
+- No usar keys de widgets condicionales como fuente de verdad del modelo.
+
+## 7. Reglas Especificas De NASA POWER
 
 - NASA POWER aporta GHI, DNI, DHI, temperatura y viento.
 - La orientacion del panel no debe invalidar NASA POWER.
 - Cambiar tilt, azimuth, albedo, modelo POA, paneles, potencia o perdidas no debe invalidar NASA.
 - NASA solo debe invalidarse por cambios climaticos o geograficos reales: latitud, longitud, zona horaria, ano, modo NASA, ano climatico, ano base o fuente seleccionada.
-- Cambiar configuracion FV, inclinacion, azimuth, albedo o modelo POA debe recalcular la produccion con la misma tabla climatica vigente, sin obligar a recargar NASA.
-- Si la firma NASA cargada no coincide con la configuracion actual, la app debe indicarlo claramente y usar fallback temporal hasta que el usuario recargue los datos climaticos.
 - NASA provisional 2026 debe usar datos disponibles de 2026 y completar faltantes con patron climatico 2025.
 - La tabla final provisional debe tener timestamps del ano de simulacion.
 - La validacion debe hacerse sobre la tabla final ensamblada, no sobre datos crudos incompletos.
 
-## 7. Reglas De Interfaz
-
-- La experiencia debe ser guiada y progresiva.
-- Las vistas principales deben evitar saturacion visual.
-- Las explicaciones tecnicas largas deben ir dentro de expanders.
-- Los resultados principales deben presentarse como indicadores compactos.
-- Las graficas deben responder a preguntas concretas del usuario.
-- No deben aparecer etiquetas HTML como texto visible.
-- No se deben mostrar tracebacks o mensajes internos al usuario final.
-- No se deben usar componentes HTML que simulen widgets interactivos.
-- Los botones, inputs, checkboxes, selectores y sliders deben ser widgets nativos de Streamlit.
-
-## 8. Flujo Recomendado Para Futuros Chats De Trabajo
+## 8. Flujo De Trabajo Recomendado Para Futuros Chats De Codex
 
 - Al iniciar un nuevo chat, leer este archivo primero.
 - Antes de implementar una nueva etapa, auditar lo que ya existe.
-- Proponer un plan de implementacion por pasos cuando la tarea sea amplia.
-- No modificar codigo durante una auditoria inicial.
+- Proponer plan de implementacion por pasos.
+- No modificar codigo durante la auditoria inicial.
 - Trabajar por tareas acotadas.
 - Evitar cambios masivos no solicitados.
 - Entregar siempre un resumen breve de archivos modificados y validaciones.
@@ -252,12 +232,3 @@ python -m pytest -q -p no:cacheprovider
 
 Para cambios solo de documentacion, no es obligatorio ejecutar pytest. En ese caso se debe confirmar que no se modifico codigo funcional.
 
-## 10. Validacion Tecnica Del Modelo
-
-La validacion tecnica detallada del modelo fisico, demanda, balance energetico, tarifa y pruebas automatizadas se conserva en:
-
-```text
-docs/model_validation.md
-```
-
-Ese documento debe actualizarse cuando cambien formulas, supuestos, motores de calculo, columnas de salida o pruebas automatizadas.

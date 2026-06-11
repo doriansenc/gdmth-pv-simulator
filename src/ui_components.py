@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 import streamlit as st
@@ -81,8 +82,9 @@ def app_header() -> None:
         <div class="app-header">
             <div class="app-header-icon">{icon("sun")}</div>
             <div>
-                <h1>Reto GDMTH: Ingeniería y Viabilidad Fotovoltaica</h1>
-                <p>Motor de simulación para irradiancia POA, generación eléctrica quinceminutal y análisis energético.</p>
+                <h1>FVoltData</h1>
+                <p>Herramienta guiada para estimar potencial solar, producción fotovoltaica, ahorro energético y respaldo ante apagones.</p>
+                <p>Configura tu ubicación, sistema y orientación para obtener un diagnóstico solar rápido.</p>
             </div>
         </div>
         """,
@@ -122,12 +124,14 @@ def info_panel(title: str, body: str, icon_name: str = "settings") -> None:
 
 
 def metric_card(label: str, value: str, help_text: str | None = None) -> None:
-    help_html = f"<span>{help_text}</span>" if help_text else ""
+    safe_label = html.escape(str(label))
+    safe_value = html.escape(str(value))
+    help_html = f"<span>{html.escape(str(help_text))}</span>" if help_text else ""
     st.markdown(
         f"""
         <div class="metric-card-custom">
-            <p>{label}</p>
-            <h3>{value}</h3>
+            <p>{safe_label}</p>
+            <h3>{safe_value}</h3>
             {help_html}
         </div>
         """,

@@ -22,7 +22,7 @@ class PVSystemConfig:
     albedo: float
     system_losses: float
     timezone: str = "Etc/GMT+6"
-    transposition_model: str = "isotropic"
+    transposition_model: str = "haydavies"
     weather_adjustment_factor: float = 1.0
     weather_condition: str = "Cielo despejado"
     temperature_coefficient_per_c: float = -0.004
@@ -213,10 +213,12 @@ def _build_pvlib_weather_components(
     if "wind_speed_m_s" not in weather.columns:
         weather["wind_speed_m_s"] = 1.0
 
+    weather = weather[["GHI_W_m2", "DNI_W_m2", "DHI_W_m2", "temperature_C", "wind_speed_m_s"]].copy()
+    weather[["GHI_W_m2", "DNI_W_m2", "DHI_W_m2"]] = weather[
+        ["GHI_W_m2", "DNI_W_m2", "DHI_W_m2"]
+    ].clip(lower=0.0)
     weather["wind_speed_m_s"] = weather["wind_speed_m_s"].clip(lower=0.0)
-    return weather[["GHI_W_m2", "DNI_W_m2", "DHI_W_m2", "temperature_C", "wind_speed_m_s"]].clip(
-        lower={"GHI_W_m2": 0.0, "DNI_W_m2": 0.0, "DHI_W_m2": 0.0, "wind_speed_m_s": 0.0}
-    ), detail
+    return weather, detail
 
 
 def pvlib_poa_transposition(
@@ -244,18 +246,35 @@ def pvlib_poa_transposition(
             solar_position["apparent_zenith"]
         )
 
-    total = pvlib.irradiance.get_total_irradiance(
-        surface_tilt=config.tilt_deg,
-        surface_azimuth=config.azimuth_deg,
-        solar_zenith=solar_position["apparent_zenith"],
-        solar_azimuth=solar_position["azimuth"],
-        dni=weather["DNI_W_m2"],
-        ghi=weather["GHI_W_m2"],
-        dhi=weather["DHI_W_m2"],
-        albedo=config.albedo,
-        model=model,
-        **kwargs,
-    )
+    try:
+        total = pvlib.irradiance.get_total_irradiance(
+            surface_tilt=config.tilt_deg,
+            surface_azimuth=config.azimuth_deg,
+            solar_zenith=solar_position["apparent_zenith"],
+            solar_azimuth=solar_position["azimuth"],
+            dni=weather["DNI_W_m2"],
+            ghi=weather["GHI_W_m2"],
+            dhi=weather["DHI_W_m2"],
+            albedo=config.albedo,
+            model=model,
+            **kwargs,
+        )
+        model_used = model
+    except Exception:
+        if model == "isotropic":
+            raise
+        total = pvlib.irradiance.get_total_irradiance(
+            surface_tilt=config.tilt_deg,
+            surface_azimuth=config.azimuth_deg,
+            solar_zenith=solar_position["apparent_zenith"],
+            solar_azimuth=solar_position["azimuth"],
+            dni=weather["DNI_W_m2"],
+            ghi=weather["GHI_W_m2"],
+            dhi=weather["DHI_W_m2"],
+            albedo=config.albedo,
+            model="isotropic",
+        )
+        model_used = "isotropic"
 
     poa = pd.DataFrame(
         {
@@ -268,7 +287,9 @@ def pvlib_poa_transposition(
         index=times,
     )
 
-    return poa.clip(lower=0.0)
+    poa = poa.clip(lower=0.0)
+    poa.attrs["transposition_model_used"] = model_used
+    return poa
 
 
 def jensen_poa_transposition(
@@ -353,7 +374,7 @@ def simulate_pv_system(
             "weather_model_detail": weather_detail,
             "weather_condition": config.weather_condition,
             "weather_adjustment_factor": config.weather_adjustment_factor,
-            "transposition_model": config.transposition_model,
+            "transposition_model": poa.attrs.get("transposition_model_used", config.transposition_model),
             "installed_power_kw": config.installed_power_kw,
             "estimated_panel_power_w": config.estimated_panel_power_w,
             "module_power_from_area_w": config.module_power_from_area_w,
